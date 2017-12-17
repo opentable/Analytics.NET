@@ -42,8 +42,8 @@ namespace Segment.Request
 		}
 
 		public void MakeRequest(Batch batch)
-        {
-            Stopwatch watch = new Stopwatch();
+		{
+			Stopwatch watch = new Stopwatch();
 
 			try
 			{
@@ -53,14 +53,14 @@ namespace Segment.Request
 				batch.SentAt = DateTime.Now.ToString("o");
 
 				//string json = JsonConvert.SerializeObject(batch, settings);
-				
+
 				HttpWebRequest request = (HttpWebRequest) WebRequest.Create(uri);
 
 				// Basic Authentication
 				// https://segment.io/docs/tracking-api/reference/#authentication
 				request.Headers["Authorization"] = BasicAuthHeader(batch.WriteKey, "");
 
-				request.Timeout = (int)Timeout.TotalMilliseconds;
+				request.Timeout = (int) Timeout.TotalMilliseconds;
 				request.ContentType = "application/json";
 				request.Method = "POST";
 
@@ -69,55 +69,55 @@ namespace Segment.Request
 				// buffer the data before sending, ok since we send all in one shot
 				request.AllowWriteStreamBuffering = true;
 
-                // wms 1/16/2017: there is no known json size; 
-                // we're serializing the payload directly to the request stream
-                Logger.Info("Sending analytics request to Segment.io ..", new Dict
-                {
-                    { "batch id", batch.MessageId },
-                    { "json size", 0 },
-                    { "batch size", batch.batch.Count }
-                });
+				// wms 1/16/2017: there is no known json size; 
+				// we're serializing the payload directly to the request stream
+				Logger.Info("Sending analytics request to Segment.io ..", new Dict
+				{
+					{"batch id", batch.MessageId},
+					{"json size", 0},
+					{"batch size", batch.batch.Count}
+				});
 
-                watch.Start();
+				watch.Start();
 
 				using (var requestStream = request.GetRequestStream())
 				{
 					using (StreamWriter writer = new StreamWriter(requestStream))
 					{
-					    using (JsonWriter jsonWriter = new JsonTextWriter(writer))
-					    {
-					        JsonSerializer serializer = new JsonSerializer();
-                            serializer.Serialize(jsonWriter, batch);
-                            jsonWriter.Flush();
-                        }
+						using (JsonWriter jsonWriter = new JsonTextWriter(writer))
+						{
+							JsonSerializer serializer = new JsonSerializer();
+							serializer.Serialize(jsonWriter, batch);
+							jsonWriter.Flush();
+						}
 					}
 				}
 
-				using (var response = (HttpWebResponse)request.GetResponse())
+				using (var response = (HttpWebResponse) request.GetResponse())
 				{
-                    watch.Stop();
+					watch.Stop();
 
 					if (response.StatusCode == HttpStatusCode.OK)
 					{
-                        Succeed(batch, watch.ElapsedMilliseconds);
+						Succeed(batch, watch.ElapsedMilliseconds);
 					}
 					else
 					{
 						string responseStr = String.Format("Status Code {0}. ", response.StatusCode);
 						responseStr += ReadResponse(response);
-                        Fail(batch, new APIException("Unexpected Status Code", responseStr), watch.ElapsedMilliseconds);
+						Fail(batch, new APIException("Unexpected Status Code", responseStr), watch.ElapsedMilliseconds);
 					}
 				}
 			}
-			catch (WebException e) 
+			catch (WebException e)
 			{
-                watch.Stop();
-                Fail(batch, ParseException(e), watch.ElapsedMilliseconds);
+				watch.Stop();
+				Fail(batch, ParseException(e), watch.ElapsedMilliseconds);
 			}
 			catch (System.Exception e)
 			{
-                watch.Stop();
-                Fail(batch, e, watch.ElapsedMilliseconds);
+				watch.Stop();
+				Fail(batch, e, watch.ElapsedMilliseconds);
 			}
 		}
 
