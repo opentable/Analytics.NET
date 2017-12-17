@@ -52,7 +52,7 @@ namespace Segment.Request
 				// set the current request time
 				batch.SentAt = DateTime.Now.ToString("o");
 
-				string json = JsonConvert.SerializeObject(batch, settings);
+				//string json = JsonConvert.SerializeObject(batch, settings);
 				
 				HttpWebRequest request = (HttpWebRequest) WebRequest.Create(uri);
 
@@ -69,10 +69,12 @@ namespace Segment.Request
 				// buffer the data before sending, ok since we send all in one shot
 				request.AllowWriteStreamBuffering = true;
 
+                // wms 1/16/2017: there is no known json size; 
+                // we're serializing the payload directly to the request stream
                 Logger.Info("Sending analytics request to Segment.io ..", new Dict
                 {
                     { "batch id", batch.MessageId },
-                    { "json size", json.Length },
+                    { "json size", 0 },
                     { "batch size", batch.batch.Count }
                 });
 
@@ -82,7 +84,12 @@ namespace Segment.Request
 				{
 					using (StreamWriter writer = new StreamWriter(requestStream))
 					{
-						writer.Write(json);
+					    using (JsonWriter jsonWriter = new JsonTextWriter(writer))
+					    {
+					        JsonSerializer serializer = new JsonSerializer();
+                            serializer.Serialize(jsonWriter, batch);
+                            jsonWriter.Flush();
+                        }
 					}
 				}
 
