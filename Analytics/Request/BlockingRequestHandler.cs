@@ -52,8 +52,6 @@ namespace Segment.Request
 				// set the current request time
 				batch.SentAt = DateTime.Now.ToString("o");
 
-				//string json = JsonConvert.SerializeObject(batch, settings);
-
 				HttpWebRequest request = (HttpWebRequest) WebRequest.Create(uri);
 
 				// Basic Authentication
@@ -66,8 +64,12 @@ namespace Segment.Request
 
 				// do not use the expect 100-continue behavior
 				request.ServicePoint.Expect100Continue = false;
-				// buffer the data before sending, ok since we send all in one shot
-				request.AllowWriteStreamBuffering = true;
+
+				// do not buffer the data before sending
+				request.AllowWriteStreamBuffering = false;
+
+				// use Transfer-Encoding: Chunked
+				request.SendChunked = true;
 
 				// wms 1/16/2017: there is no known json size; 
 				// we're serializing the payload directly to the request stream
