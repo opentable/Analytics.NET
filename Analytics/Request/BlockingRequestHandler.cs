@@ -6,6 +6,7 @@ using System.Runtime.Serialization.Json;
 using System.IO;
 using System.Threading;
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Web;
 
 using Newtonsoft.Json;
@@ -80,17 +81,13 @@ namespace Segment.Request
 
 				watch.Start();
 
-				using (var requestStream = request.GetRequestStream())
+				if (Defaults.GZipBatchBeforeSending)
 				{
-					using (StreamWriter writer = new StreamWriter(requestStream))
-					{
-						using (JsonWriter jsonWriter = new JsonTextWriter(writer))
-						{
-							JsonSerializer serializer = new JsonSerializer();
-							serializer.Serialize(jsonWriter, batch);
-							jsonWriter.Flush();
-						}
-					}
+					WriteJsonBatchCompressed(batch, request);
+				}
+				else
+				{
+					WriteJsonBatch(batch, request);
 				}
 
 				using (var response = (HttpWebResponse) request.GetResponse())
@@ -118,6 +115,42 @@ namespace Segment.Request
 			{
 				watch.Stop();
 				Fail(batch, e, watch.ElapsedMilliseconds);
+			}
+		}
+
+		private static void WriteJsonBatch(Batch batch, HttpWebRequest request)
+		{
+			using (var requestStream = request.GetRequestStream())
+			{
+				using (StreamWriter writer = new StreamWriter(requestStream))
+				{
+					using (JsonWriter jsonWriter = new JsonTextWriter(writer))
+					{
+						JsonSerializer serializer = new JsonSerializer();
+						serializer.Serialize(jsonWriter, batch);
+						jsonWriter.Flush();
+					}
+				}
+			}
+		}
+
+		private static void WriteJsonBatchCompressed(Batch batch, HttpWebRequest request)
+		{
+			request.Headers.Add("Content-Encoding", "gzip");
+			using (var requestStream = request.GetRequestStream())
+			{
+				using (var zipStream = new GZipStream(requestStream, CompressionMode.Compress, false))
+				{
+					using (StreamWriter writer = new StreamWriter(zipStream))
+					{
+						using (JsonWriter jsonWriter = new JsonTextWriter(writer))
+						{
+							JsonSerializer serializer = new JsonSerializer();
+							serializer.Serialize(jsonWriter, batch);
+							jsonWriter.Flush();
+						}
+					}
+				}
 			}
 		}
 
