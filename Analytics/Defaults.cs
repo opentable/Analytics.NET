@@ -13,5 +13,7 @@ namespace Segment
         public static int BatchIncrement = Constants.BatchIncrement;
 
         public static bool Async = true;
+
+	    public static bool GZipBatchBeforeSending = false;
     }
 }
